@@ -2,6 +2,12 @@
 
 A mobile application for customers to order food by scanning QR codes at restaurant tables. Built with Expo and TypeScript, following Clean Architecture and Domain-Driven Design principles.
 
+## Pre-built apps (EAS)
+
+Cloud builds (Android APK/AAB, iOS) are produced with [EAS Build](https://docs.expo.dev/build/introduction/).
+- **Android APK**: [https://drive.google.com/file/d/1hEZu-_zoomyS5IHwLsFQA9mB6sad3S42/view?usp=sharing](https://drive.google.com/file/d/1hEZu-_zoomyS5IHwLsFQA9mB6sad3S42/view?usp=sharing)
+- **iOS IPA**: Not Available since it needed the Apple Developer Account
+
 ## Features
 
 - QR code scanning for table identification
