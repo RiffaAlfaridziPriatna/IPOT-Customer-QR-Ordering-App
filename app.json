@@ -32,13 +32,19 @@
       },
       "package": "com.ipot.customerqrordering",
       "permissions": [
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e7dd9518-5e28-4538-a958-30269498f2e3"
+      }
     }
   }
 }
