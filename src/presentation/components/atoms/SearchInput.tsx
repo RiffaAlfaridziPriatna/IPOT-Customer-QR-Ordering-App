@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, TextInput, StyleSheet, TextInputProps } from 'react-native';
 import { colors, spacing, borderRadius } from '@config/theme';
-import { Text } from './Text';
 
 interface SearchInputProps extends TextInputProps {
   value: string;
@@ -11,18 +10,20 @@ interface SearchInputProps extends TextInputProps {
 export const SearchInput: React.FC<SearchInputProps> = ({
   value,
   onChangeText,
-  placeholder = 'Search...',
+  placeholder = 'Search menu...',
+  style,
   ...props
 }) => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.icon}>🔍</Text>
+    <View style={[styles.container, style]}>
       <TextInput
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.text.disabled}
+        placeholderTextColor={colors.text.tertiary}
+        autoCorrect={false}
+        clearButtonMode="while-editing"
         {...props}
       />
     </View>
@@ -35,18 +36,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  icon: {
-    fontSize: 18,
-    marginRight: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    height: 44,
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text.primary,
   },
 });

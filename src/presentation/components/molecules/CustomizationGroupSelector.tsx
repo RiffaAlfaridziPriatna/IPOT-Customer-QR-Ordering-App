@@ -2,7 +2,6 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, spacing, borderRadius } from '@config/theme';
 import { Text } from '../atoms/Text';
-import { Badge } from '../atoms/Badge';
 import { CustomizationGroup, CustomizationOption } from '@domain/entities';
 import { CustomizationSelection } from '@domain/value-objects';
 import { formatPrice } from '@utils/formatters';
@@ -22,33 +21,36 @@ export const CustomizationGroupSelector: React.FC<CustomizationGroupSelectorProp
     selections.some((s) => s.optionId === optionId);
 
   const toggleOption = (option: CustomizationOption) => {
-    const existingIndex = selections.findIndex((s) => s.optionId === option.id);
+    const exists = selections.findIndex((s) => s.optionId === option.id);
 
-    if (existingIndex >= 0) {
-      const newSelections = selections.filter((s) => s.optionId !== option.id);
-      onChange(newSelections);
-    } else {
-      if (group.maxSelections === 1) {
-        onChange([{ optionId: option.id, quantity: 1 }]);
-      } else {
-        if (selections.length < group.maxSelections) {
-          onChange([...selections, { optionId: option.id, quantity: 1 }]);
-        }
-      }
+    if (exists >= 0) {
+      onChange(selections.filter((s) => s.optionId !== option.id));
+    } else if (group.maxSelections === 1) {
+      onChange([{ optionId: option.id, quantity: 1 }]);
+    } else if (selections.length < group.maxSelections) {
+      onChange([...selections, { optionId: option.id, quantity: 1 }]);
     }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text variant="h3">{group.name}</Text>
-        {group.required && <Badge variant="error">Required</Badge>}
+        <View>
+          <Text variant="h3">{group.name}</Text>
+          <Text variant="caption" color="tertiary">
+            {group.maxSelections === 1
+              ? 'Choose one'
+              : `Choose up to ${group.maxSelections}`}
+          </Text>
+        </View>
+        {group.required && (
+          <View style={styles.requiredBadge}>
+            <Text variant="caption" style={styles.requiredText}>
+              Required
+            </Text>
+          </View>
+        )}
       </View>
-      <Text variant="caption" color="secondary" style={styles.subtitle}>
-        {group.maxSelections === 1
-          ? 'Choose one'
-          : `Choose up to ${group.maxSelections}`}
-      </Text>
 
       <View style={styles.options}>
         {group.options.map((option) => {
@@ -58,14 +60,13 @@ export const CustomizationGroupSelector: React.FC<CustomizationGroupSelectorProp
               key={option.id}
               style={[styles.option, selected && styles.optionSelected]}
               onPress={() => toggleOption(option)}
+              activeOpacity={0.7}
             >
               <View style={styles.optionContent}>
                 <View style={[styles.radio, selected && styles.radioSelected]}>
                   {selected && <View style={styles.radioInner} />}
                 </View>
-                <Text variant="body" style={styles.optionName}>
-                  {option.name}
-                </Text>
+                <Text variant="body">{option.name}</Text>
               </View>
               {option.priceModifier.amount > 0 && (
                 <Text variant="bodySmall" style={styles.priceModifier}>
@@ -82,16 +83,23 @@ export const CustomizationGroupSelector: React.FC<CustomizationGroupSelectorProp
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xxl,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
     marginBottom: spacing.md,
+  },
+  requiredBadge: {
+    backgroundColor: colors.errorLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.xs,
+  },
+  requiredText: {
+    color: colors.error,
+    fontWeight: '600',
   },
   options: {
     gap: spacing.sm,
@@ -100,15 +108,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.md,
+    padding: spacing.lg,
     backgroundColor: colors.surface,
     borderRadius: borderRadius.md,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: 'transparent',
   },
   optionSelected: {
     borderColor: colors.primary,
-    backgroundColor: colors.background,
+    backgroundColor: colors.primaryLight,
   },
   optionContent: {
     flexDirection: 'row',
@@ -116,11 +124,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   radio: {
-    width: 24,
-    height: 24,
-    borderRadius: borderRadius.full,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: colors.surfaceHighlight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
@@ -129,13 +137,10 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: borderRadius.full,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: colors.primary,
-  },
-  optionName: {
-    flex: 1,
   },
   priceModifier: {
     color: colors.primary,

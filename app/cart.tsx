@@ -8,7 +8,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { colors, spacing, borderRadius } from '@config/theme';
+import { colors, spacing, borderRadius, shadows } from '@config/theme';
 import { Text } from '@presentation/components/atoms/Text';
 import { Button } from '@presentation/components/atoms/Button';
 import { CartItemRow } from '@presentation/components/molecules/CartItemRow';
@@ -19,52 +19,32 @@ import { formatCurrency } from '@utils/formatters';
 
 export default function CartScreen() {
   const router = useRouter();
-  const {
-    getCartItems,
-    getSubtotal,
-    updateQuantity,
-    removeItem,
-    clearCart,
-    tableId,
-  } = useCartStore();
+  const { getCartItems, getSubtotal, updateQuantity, removeItem, clearCart, tableId } =
+    useCartStore();
 
   const cartItems = getCartItems();
   const subtotal = getSubtotal();
   const [customerNote, setCustomerNote] = useState('');
-  
   const submitOrder = useSubmitOrder();
 
   const handleSubmitOrder = async () => {
-    if (!tableId) {
-      Alert.alert('Error', 'Table ID not found');
-      return;
-    }
-
-    if (cartItems.length === 0) {
-      Alert.alert('Error', 'Your cart is empty');
-      return;
-    }
-
-    const orderItems = cartItems.map((item) => ({
-      menuItemId: item.menuItem.id,
-      quantity: item.quantity,
-      customizations: item.customizations,
-    }));
+    if (!tableId) return Alert.alert('Error', 'Table ID not found');
+    if (cartItems.length === 0) return Alert.alert('Error', 'Your cart is empty');
 
     try {
       const order = await submitOrder.mutateAsync({
         tableId,
-        items: orderItems,
+        items: cartItems.map((i) => ({
+          menuItemId: i.menuItem.id,
+          quantity: i.quantity,
+          customizations: i.customizations,
+        })),
         customerNote: customerNote.trim(),
       });
-
       clearCart();
       router.replace(`/order/${order.id}`);
-    } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to submit order'
-      );
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to submit order');
     }
   };
 
@@ -72,10 +52,13 @@ export default function CartScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.emptyContainer}>
-          <Text variant="h2" style={styles.emptyTitle}>
+          <View style={styles.emptyIcon}>
+            <Text style={{ fontSize: 48 }}>{'\uD83D\uDED2'}</Text>
+          </View>
+          <Text variant="h2" align="center">
             Your cart is empty
           </Text>
-          <Text variant="body" color="secondary" style={styles.emptyMessage}>
+          <Text variant="body" color="secondary" align="center" style={styles.emptyBody}>
             Add items from the menu to get started
           </Text>
           <Button variant="primary" onPress={() => router.back()}>
@@ -88,61 +71,54 @@ export default function CartScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.itemsSection}>
-          <Text variant="h3" style={styles.sectionTitle}>
-            Your Items
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.section}>
+          <Text variant="caption" color="secondary" style={styles.sectionLabel}>
+            YOUR ITEMS
           </Text>
           {cartItems.map((item, index) => (
             <CartItemRow
               key={`${item.menuItem.id}-${index}`}
               item={item}
-              onQuantityChange={(quantity) =>
-                updateQuantity(
-                  item.menuItem.id,
-                  item.customizations,
-                  quantity
-                )
+              onQuantityChange={(qty) =>
+                updateQuantity(item.menuItem.id, item.customizations, qty)
               }
-              onRemove={() =>
-                removeItem(item.menuItem.id, item.customizations)
-              }
+              onRemove={() => removeItem(item.menuItem.id, item.customizations)}
             />
           ))}
         </View>
 
-        <View style={styles.noteSection}>
-          <Text variant="h3" style={styles.sectionTitle}>
-            Special Instructions
+        <View style={styles.section}>
+          <Text variant="caption" color="secondary" style={styles.sectionLabel}>
+            SPECIAL INSTRUCTIONS
           </Text>
           <TextInput
             style={styles.noteInput}
             value={customerNote}
             onChangeText={setCustomerNote}
-            placeholder="Any allergies or special requests?"
-            placeholderTextColor={colors.text.disabled}
+            placeholder="Allergies, preferences..."
+            placeholderTextColor={colors.text.tertiary}
             multiline
             numberOfLines={3}
             textAlignVertical="top"
           />
         </View>
 
-        <View style={styles.summarySection}>
-          <Text variant="h3" style={styles.sectionTitle}>
-            Order Summary
-          </Text>
+        <View style={[styles.section, styles.summaryCard]}>
           <View style={styles.summaryRow}>
             <Text variant="body" color="secondary">
-              Subtotal ({cartItems.length}{' '}
-              {cartItems.length === 1 ? 'item' : 'items'})
+              Items ({cartItems.length})
             </Text>
             <Text variant="body">{formatCurrency(subtotal)}</Text>
           </View>
-          <View style={styles.totalRow}>
-            <Text variant="h2">Total</Text>
+          <View style={styles.divider} />
+          <View style={styles.summaryRow}>
+            <Text variant="h3">Total</Text>
             <PriceTag price={subtotal} size="large" />
           </View>
         </View>
+
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       <View style={styles.footer}>
@@ -172,59 +148,61 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
+    padding: spacing.xxxl,
   },
-  emptyTitle: {
-    marginBottom: spacing.sm,
+  emptyIcon: {
+    marginBottom: spacing.xxl,
   },
-  emptyMessage: {
-    textAlign: 'center',
-    marginBottom: spacing.lg,
+  emptyBody: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.xxl,
+    maxWidth: 240,
   },
-  itemsSection: {
-    padding: spacing.md,
+  section: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
   },
-  sectionTitle: {
+  sectionLabel: {
     marginBottom: spacing.md,
-  },
-  noteSection: {
-    padding: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   noteInput: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     borderRadius: borderRadius.md,
-    padding: spacing.md,
-    fontSize: 16,
+    padding: spacing.lg,
+    fontSize: 15,
     color: colors.text.primary,
-    borderWidth: 1,
-    borderColor: colors.border,
     minHeight: 80,
+    ...shadows.sm,
   },
-  summarySection: {
-    padding: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  summaryCard: {
+    backgroundColor: colors.card,
+    marginHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    ...shadows.sm,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: 2,
-    borderTopColor: colors.border,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginVertical: spacing.lg,
   },
   footer: {
-    padding: spacing.md,
-    borderTopWidth: 1,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxxl,
+    backgroundColor: colors.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
-    backgroundColor: colors.background,
+    ...shadows.lg,
   },
 });

@@ -12,14 +12,17 @@ interface ErrorMessageProps {
 export const ErrorMessage: React.FC<ErrorMessageProps> = ({ message, onRetry }) => {
   return (
     <View style={styles.container}>
-      <Text variant="h3" style={styles.title}>
+      <View style={styles.iconCircle}>
+        <Text style={styles.icon}>!</Text>
+      </View>
+      <Text variant="h3" align="center" style={styles.title}>
         Something went wrong
       </Text>
-      <Text variant="body" color="secondary" style={styles.message}>
+      <Text variant="bodySmall" color="secondary" align="center" style={styles.message}>
         {message}
       </Text>
       {onRetry && (
-        <Button variant="outline" size="small" onPress={onRetry} style={styles.button}>
+        <Button variant="outline" size="small" onPress={onRetry}>
           Try Again
         </Button>
       )}
@@ -31,20 +34,27 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    margin: spacing.md,
+    padding: spacing.xxxl,
+  },
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.errorLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
+  icon: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.error,
   },
   title: {
     marginBottom: spacing.sm,
-    color: colors.error,
   },
   message: {
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  button: {
-    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
+    maxWidth: 260,
   },
 });

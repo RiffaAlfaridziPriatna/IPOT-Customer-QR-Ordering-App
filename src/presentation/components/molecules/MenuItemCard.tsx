@@ -11,26 +11,44 @@ interface MenuItemCardProps {
 }
 
 export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onPress }) => {
+  const hasCustomizations = item.customizationGroups.length > 0;
+
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress}>
-      {item.imageUrl && (
-        <Image source={{ uri: item.imageUrl }} style={styles.image} />
-      )}
+    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.content}>
-        <Text variant="h3" numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text variant="bodySmall" color="secondary" numberOfLines={2} style={styles.description}>
-          {item.description}
-        </Text>
-        <View style={styles.footer}>
-          <PriceTag price={item.price} />
-          {item.customizationGroups.length > 0 && (
-            <Text variant="caption" style={styles.customizable}>
-              Customizable
-            </Text>
-          )}
+        <View style={styles.info}>
+          <Text variant="h3" numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text
+            variant="bodySmall"
+            color="secondary"
+            numberOfLines={2}
+            style={styles.description}
+          >
+            {item.description}
+          </Text>
+          <View style={styles.footer}>
+            <PriceTag price={item.price} size="medium" />
+            {hasCustomizations && (
+              <View style={styles.customizeBadge}>
+                <Text variant="caption" style={styles.customizeText}>
+                  Customize
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
+
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.image} />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Text style={styles.placeholderEmoji}>
+              {item.categoryId === 3 ? '\u2615' : '\uD83C\uDF5C'}
+            </Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -38,31 +56,55 @@ export const MenuItemCard: React.FC<MenuItemCardProps> = ({ item, onPress }) => 
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
-    ...shadows.md,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
-  },
-  image: {
-    width: '100%',
-    height: 150,
-    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    ...shadows.sm,
   },
   content: {
-    padding: spacing.md,
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  info: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   description: {
     marginTop: spacing.xs,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  customizable: {
-    color: colors.accent,
-    fontStyle: 'italic',
+  customizeBadge: {
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: borderRadius.xs,
+  },
+  customizeText: {
+    color: colors.primary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  image: {
+    width: 88,
+    height: 88,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+  },
+  imagePlaceholder: {
+    width: 88,
+    height: 88,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderEmoji: {
+    fontSize: 32,
   },
 });

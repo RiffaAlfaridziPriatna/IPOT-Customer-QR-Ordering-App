@@ -11,16 +11,20 @@ interface BadgeProps {
   style?: ViewStyle;
 }
 
-export const Badge: React.FC<BadgeProps> = ({
-  variant = 'default',
-  children,
-  style,
-}) => {
-  const badgeStyle = [styles.base, styles[variant], style];
+const VARIANT_MAP: Record<BadgeVariant, { bg: string; text: string }> = {
+  default: { bg: colors.surface, text: colors.text.secondary },
+  success: { bg: colors.successLight, text: colors.success },
+  error: { bg: colors.errorLight, text: colors.error },
+  warning: { bg: colors.warningLight, text: colors.warning },
+  info: { bg: colors.infoLight, text: colors.info },
+};
+
+export const Badge: React.FC<BadgeProps> = ({ variant = 'default', children, style }) => {
+  const v = VARIANT_MAP[variant];
 
   return (
-    <View style={badgeStyle}>
-      <Text variant="caption" style={styles.text}>
+    <View style={[styles.base, { backgroundColor: v.bg }, style]}>
+      <Text variant="caption" style={{ color: v.text, fontWeight: '600' }}>
         {children}
       </Text>
     </View>
@@ -29,28 +33,9 @@ export const Badge: React.FC<BadgeProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
     alignSelf: 'flex-start',
-  },
-  default: {
-    backgroundColor: colors.surface,
-  },
-  success: {
-    backgroundColor: colors.success,
-  },
-  error: {
-    backgroundColor: colors.error,
-  },
-  warning: {
-    backgroundColor: colors.warning,
-  },
-  info: {
-    backgroundColor: colors.info,
-  },
-  text: {
-    color: '#FFFFFF',
-    fontSize: 11,
   },
 });

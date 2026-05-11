@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, ScrollView, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors, spacing, borderRadius } from '@config/theme';
+import { colors, spacing, borderRadius, shadows } from '@config/theme';
 import { Text } from '@presentation/components/atoms/Text';
 import { Button } from '@presentation/components/atoms/Button';
 import { Badge } from '@presentation/components/atoms/Badge';
@@ -11,176 +11,155 @@ import { useOrderStatus } from '@presentation/hooks/useOrderStatus';
 import { OrderStatus } from '@domain/entities';
 import { formatDateTime, formatEstimatedTime } from '@utils/formatters';
 
-const STATUS_CONFIG: Record<
-  OrderStatus,
-  { label: string; variant: 'default' | 'info' | 'warning' | 'success' }
-> = {
-  pending: { label: 'Pending', variant: 'default' },
-  confirmed: { label: 'Confirmed', variant: 'info' },
-  preparing: { label: 'Preparing', variant: 'warning' },
-  ready: { label: 'Ready', variant: 'success' },
-  served: { label: 'Served', variant: 'success' },
-  cancelled: { label: 'Cancelled', variant: 'default' },
+type BadgeVariant = 'default' | 'info' | 'warning' | 'success';
+
+const STATUS_CONFIG: Record<OrderStatus, { label: string; variant: BadgeVariant; icon: string }> = {
+  pending: { label: 'Pending', variant: 'default', icon: '\u23F3' },
+  confirmed: { label: 'Confirmed', variant: 'info', icon: '\u2705' },
+  preparing: { label: 'Preparing', variant: 'warning', icon: '\uD83D\uDC68\u200D\uD83C\uDF73' },
+  ready: { label: 'Ready', variant: 'success', icon: '\uD83C\uDF7D\uFE0F' },
+  served: { label: 'Served', variant: 'success', icon: '\u2728' },
+  cancelled: { label: 'Cancelled', variant: 'default', icon: '\u274C' },
 };
+
+const TIMELINE: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'ready', 'served'];
 
 export default function OrderStatusScreen() {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const router = useRouter();
   const { data: order, isLoading, error, refetch } = useOrderStatus(orderId);
 
-  if (isLoading) {
-    return <LoadingSpinner message="Loading order..." />;
-  }
+  if (isLoading) return <LoadingSpinner message="Loading order..." />;
 
   if (error || !order) {
     return (
       <SafeAreaView style={styles.container}>
-        <ErrorMessage
-          message={error?.message || 'Failed to load order'}
-          onRetry={refetch}
-        />
+        <ErrorMessage message={error?.message || 'Failed to load order'} onRetry={refetch} />
       </SafeAreaView>
     );
   }
 
-  const statusConfig = STATUS_CONFIG[order.status];
+  const cfg = STATUS_CONFIG[order.status];
   const isCompleted = order.status === 'served' || order.status === 'cancelled';
+  const currentIdx = TIMELINE.indexOf(order.status);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.successSection}>
-          <Text variant="h1" style={styles.successIcon}>
-            {isCompleted ? '✓' : '🍽️'}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.hero}>
+          <Text style={styles.heroIcon}>{cfg.icon}</Text>
+          <Text variant="h1" align="center">
+            {isCompleted ? 'Order Complete' : 'Order Placed'}
           </Text>
-          <Text variant="h2" style={styles.successTitle}>
-            {isCompleted ? 'Order Complete!' : 'Order Received'}
-          </Text>
-          <Text variant="body" color="secondary" style={styles.successMessage}>
-            {isCompleted
-              ? 'Thank you for your order!'
-              : 'Your order is being prepared'}
+          <Text variant="body" color="secondary" align="center" style={styles.heroSub}>
+            {isCompleted ? 'Thank you for dining with us' : 'Your order is being prepared'}
           </Text>
         </View>
 
-        <View style={styles.orderCard}>
-          <View style={styles.orderHeader}>
+        <View style={styles.card}>
+          <View style={styles.cardRow}>
             <View>
-              <Text variant="caption" color="secondary">
-                Order ID
+              <Text variant="caption" color="tertiary">
+                ORDER
               </Text>
-              <Text variant="h3">{order.id}</Text>
+              <Text variant="h3" style={{ marginTop: spacing.xxs }}>
+                {order.id}
+              </Text>
             </View>
-            <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+            <Badge variant={cfg.variant}>{cfg.label}</Badge>
           </View>
 
-          <View style={styles.divider} />
+          <View style={styles.cardDivider} />
 
-          <View style={styles.orderDetails}>
-            <View style={styles.detailRow}>
-              <Text variant="body" color="secondary">
-                Table
-              </Text>
-              <Text variant="body">{order.tableId}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Text variant="body" color="secondary">
-                Placed at
-              </Text>
-              <Text variant="body">{formatDateTime(order.createdAt)}</Text>
-            </View>
+          <View style={styles.detailGrid}>
+            <DetailPair label="Table" value={order.tableId} />
+            <DetailPair label="Placed" value={formatDateTime(order.createdAt)} />
             {order.estimatedPrepTime && !isCompleted && (
-              <View style={styles.detailRow}>
-                <Text variant="body" color="secondary">
-                  Estimated time
-                </Text>
-                <Text variant="body">
-                  {formatEstimatedTime(order.estimatedPrepTime)}
-                </Text>
-              </View>
+              <DetailPair label="Est. Time" value={formatEstimatedTime(order.estimatedPrepTime)} />
             )}
           </View>
 
-          {order.customerNote && (
+          {order.customerNote ? (
             <>
-              <View style={styles.divider} />
-              <View style={styles.noteSection}>
-                <Text variant="bodySmall" color="secondary">
-                  Special Instructions
+              <View style={styles.cardDivider} />
+              <View>
+                <Text variant="caption" color="tertiary" style={{ marginBottom: spacing.xs }}>
+                  NOTE
                 </Text>
-                <Text variant="body" style={styles.note}>
+                <Text variant="bodySmall" style={{ fontStyle: 'italic' }}>
                   {order.customerNote}
                 </Text>
               </View>
             </>
-          )}
+          ) : null}
         </View>
 
-        <View style={styles.statusSection}>
-          <Text variant="h3" style={styles.sectionTitle}>
-            Order Status
+        <View style={styles.timelineSection}>
+          <Text variant="caption" color="secondary" style={styles.timelineTitle}>
+            ORDER PROGRESS
           </Text>
-          <View style={styles.statusTimeline}>
-            {(['pending', 'confirmed', 'preparing', 'ready', 'served'] as const).map(
-              (status, index, array) => {
-                const isActive = array.indexOf(order.status) >= index;
-                const isCurrent = order.status === status;
+          {TIMELINE.map((status, idx) => {
+            const isActive = currentIdx >= idx;
+            const isCurrent = order.status === status;
+            const isLast = idx === TIMELINE.length - 1;
 
-                return (
-                  <View key={status} style={styles.timelineItem}>
-                    <View style={styles.timelineIndicator}>
-                      <View
-                        style={[
-                          styles.timelineDot,
-                          isActive && styles.timelineDotActive,
-                          isCurrent && styles.timelineDotCurrent,
-                        ]}
-                      >
-                        {isActive && (
-                          <View style={styles.timelineDotInner} />
-                        )}
-                      </View>
-                      {index < array.length - 1 && (
-                        <View
-                          style={[
-                            styles.timelineLine,
-                            isActive && styles.timelineLineActive,
-                          ]}
-                        />
-                      )}
-                    </View>
-                    <View style={styles.timelineContent}>
-                      <Text
-                        variant="body"
-                        style={[
-                          styles.timelineLabel,
-                          isActive && styles.timelineLabelActive,
-                        ]}
-                      >
-                        {STATUS_CONFIG[status].label}
-                      </Text>
-                    </View>
+            return (
+              <View key={status} style={styles.timelineRow}>
+                <View style={styles.timelineGutter}>
+                  <View
+                    style={[
+                      styles.dot,
+                      isActive && styles.dotActive,
+                      isCurrent && styles.dotCurrent,
+                    ]}
+                  >
+                    {isActive && <View style={styles.dotInner} />}
                   </View>
-                );
-              }
-            )}
-          </View>
+                  {!isLast && (
+                    <View style={[styles.line, isActive && styles.lineActive]} />
+                  )}
+                </View>
+                <Text
+                  variant="body"
+                  style={[
+                    styles.timelineLabel,
+                    isActive && styles.timelineLabelActive,
+                    isCurrent && styles.timelineLabelCurrent,
+                  ]}
+                >
+                  {STATUS_CONFIG[status].label}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
 
       {isCompleted && (
         <View style={styles.footer}>
-          <Button
-            variant="primary"
-            size="large"
-            fullWidth
-            onPress={() => router.push('/')}
-          >
+          <Button variant="primary" size="large" fullWidth onPress={() => router.push('/')}>
             Start New Order
           </Button>
         </View>
       )}
     </SafeAreaView>
+  );
+}
+
+function DetailPair({ label, value }: { label: string; value: string }) {
+  return (
+    <View>
+      <Text variant="caption" color="tertiary">
+        {label}
+      </Text>
+      <Text variant="bodySmall" style={{ marginTop: spacing.xxs }}>
+        {value}
+      </Text>
+    </View>
   );
 }
 
@@ -192,112 +171,114 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  successSection: {
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  hero: {
     alignItems: 'center',
-    padding: spacing.xl,
+    paddingTop: spacing.xxxl,
+    paddingBottom: spacing.xxl,
+    paddingHorizontal: spacing.xxl,
   },
-  successIcon: {
-    fontSize: 64,
-    marginBottom: spacing.md,
+  heroIcon: {
+    fontSize: 56,
+    marginBottom: spacing.lg,
   },
-  successTitle: {
-    marginBottom: spacing.sm,
+  heroSub: {
+    marginTop: spacing.sm,
   },
-  successMessage: {
-    textAlign: 'center',
-  },
-  orderCard: {
-    margin: spacing.md,
-    padding: spacing.lg,
-    backgroundColor: colors.background,
+  card: {
+    marginHorizontal: spacing.lg,
+    backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    padding: spacing.xl,
+    ...shadows.sm,
   },
-  orderHeader: {
+  cardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  divider: {
-    height: 1,
+  cardDivider: {
+    height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border,
-    marginVertical: spacing.md,
+    marginVertical: spacing.lg,
   },
-  orderDetails: {
-    gap: spacing.sm,
+  detailGrid: {
+    gap: spacing.md,
   },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  timelineSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xxl,
   },
-  noteSection: {
-    gap: spacing.xs,
-  },
-  note: {
-    fontStyle: 'italic',
-  },
-  statusSection: {
-    padding: spacing.md,
-  },
-  sectionTitle: {
+  timelineTitle: {
     marginBottom: spacing.lg,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
-  statusTimeline: {
-    paddingLeft: spacing.md,
-  },
-  timelineItem: {
+  timelineRow: {
     flexDirection: 'row',
-    minHeight: 60,
+    alignItems: 'flex-start',
+    minHeight: 56,
   },
-  timelineIndicator: {
+  timelineGutter: {
     alignItems: 'center',
+    width: 28,
     marginRight: spacing.md,
   },
-  timelineDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  dot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.background,
+    borderColor: colors.surfaceHighlight,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  timelineDotActive: {
+  dotActive: {
     borderColor: colors.primary,
   },
-  timelineDotCurrent: {
-    borderWidth: 3,
+  dotCurrent: {
+    borderWidth: 2.5,
+    borderColor: colors.primary,
+    ...shadows.sm,
   },
-  timelineDotInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  dotInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: colors.primary,
   },
-  timelineLine: {
+  line: {
     width: 2,
     flex: 1,
-    backgroundColor: colors.border,
+    backgroundColor: colors.surfaceHighlight,
+    borderRadius: 1,
   },
-  timelineLineActive: {
+  lineActive: {
     backgroundColor: colors.primary,
   },
-  timelineContent: {
-    flex: 1,
-    paddingTop: 2,
-  },
   timelineLabel: {
-    color: colors.text.secondary,
+    color: colors.text.tertiary,
+    paddingTop: 1,
   },
   timelineLabelActive: {
     color: colors.text.primary,
+  },
+  timelineLabelCurrent: {
     fontWeight: '600',
   },
   footer: {
-    padding: spacing.md,
-    borderTopWidth: 1,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.lg,
+    paddingBottom: Platform.OS === 'ios' ? spacing.xxxl : spacing.lg,
+    backgroundColor: colors.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+    ...shadows.lg,
   },
 });

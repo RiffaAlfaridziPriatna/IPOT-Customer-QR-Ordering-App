@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -7,9 +7,10 @@ import {
   Modal,
   ScrollView,
   SafeAreaView,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors, spacing, borderRadius } from '@config/theme';
+import { colors, spacing, borderRadius, shadows } from '@config/theme';
 import { Text } from '@presentation/components/atoms/Text';
 import { Button } from '@presentation/components/atoms/Button';
 import { SearchInput } from '@presentation/components/atoms/SearchInput';
@@ -18,7 +19,6 @@ import { ErrorMessage } from '@presentation/components/atoms/ErrorMessage';
 import { MenuItemCard } from '@presentation/components/molecules/MenuItemCard';
 import { CustomizationGroupSelector } from '@presentation/components/molecules/CustomizationGroupSelector';
 import { PriceTag } from '@presentation/components/atoms/PriceTag';
-import { Badge } from '@presentation/components/atoms/Badge';
 import { QuantityControl } from '@presentation/components/atoms/QuantityControl';
 import { useMenu } from '@presentation/hooks/useMenu';
 import { useCartStore } from '@state/cart-store';
@@ -43,43 +43,29 @@ export default function MenuScreen() {
   const filteredItems = useMemo(() => {
     if (!data) return [];
     let items = data.items;
-
-    if (selectedCategory) {
-      items = items.filter((item) => item.categoryId === selectedCategory);
-    }
-
+    if (selectedCategory) items = items.filter((i) => i.categoryId === selectedCategory);
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase();
       items = items.filter(
-        (item) =>
-          item.name.toLowerCase().includes(query) ||
-          item.description.toLowerCase().includes(query)
+        (i) => i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q)
       );
     }
-
     return items;
   }, [data, selectedCategory, searchQuery]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = useCallback(() => {
     if (!selectedItem) return;
-
     const allCustomizations = Object.values(customizations).flat();
-    
-    const validationErrors: string[] = [];
-    selectedItem.customizationGroups.forEach((group) => {
-      const selections = customizations[group.id] || [];
-      const validation = CustomizationValidator.validate(
-        selections,
-        group.required,
-        group.maxSelections
-      );
-      if (!validation.valid && validation.error) {
-        validationErrors.push(`${group.name}: ${validation.error}`);
-      }
+
+    const errors: string[] = [];
+    selectedItem.customizationGroups.forEach((g) => {
+      const sels = customizations[g.id] || [];
+      const v = CustomizationValidator.validate(sels, g.required, g.maxSelections);
+      if (!v.valid && v.error) errors.push(`${g.name}: ${v.error}`);
     });
 
-    if (validationErrors.length > 0) {
-      alert(validationErrors.join('\n'));
+    if (errors.length > 0) {
+      alert(errors.join('\n'));
       return;
     }
 
@@ -87,7 +73,7 @@ export default function MenuScreen() {
     setSelectedItem(null);
     setQuantity(1);
     setCustomizations({});
-  };
+  }, [selectedItem, customizations, quantity, addItem]);
 
   const openItemDetail = (item: MenuItem) => {
     setSelectedItem(item);
@@ -95,17 +81,12 @@ export default function MenuScreen() {
     setCustomizations({});
   };
 
-  if (isLoading) {
-    return <LoadingSpinner message="Loading menu..." />;
-  }
+  if (isLoading) return <LoadingSpinner message="Loading menu..." />;
 
   if (error || !data) {
     return (
       <View style={styles.container}>
-        <ErrorMessage
-          message={error?.message || 'Failed to load menu'}
-          onRetry={refetch}
-        />
+        <ErrorMessage message={error?.message || 'Failed to load menu'} onRetry={refetch} />
       </View>
     );
   }
@@ -114,50 +95,51 @@ export default function MenuScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text variant="h2">{data.restaurant.name}</Text>
+        <Text variant="bodySmall" color="secondary" style={{ marginTop: spacing.xxs }}>
+          Table {tableId}
+        </Text>
+
         <SearchInput
           value={searchQuery}
           onChangeText={setSearchQuery}
           placeholder="Search menu..."
           style={styles.search}
         />
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoriesContent}
           style={styles.categories}
         >
           <TouchableOpacity
-            style={[
-              styles.categoryChip,
-              !selectedCategory && styles.categoryChipActive,
-            ]}
+            style={[styles.chip, !selectedCategory && styles.chipActive]}
             onPress={() => setSelectedCategory(null)}
           >
             <Text
-              variant="body"
-              style={!selectedCategory && styles.categoryChipTextActive}
+              variant="bodySmall"
+              style={{ color: !selectedCategory ? '#FFF' : colors.text.secondary, fontWeight: '600' }}
             >
               All
             </Text>
           </TouchableOpacity>
-          {data.categories.map((category) => (
-            <TouchableOpacity
-              key={category.id}
-              style={[
-                styles.categoryChip,
-                selectedCategory === category.id && styles.categoryChipActive,
-              ]}
-              onPress={() => setSelectedCategory(category.id)}
-            >
-              <Text
-                variant="body"
-                style={
-                  selectedCategory === category.id && styles.categoryChipTextActive
-                }
+          {data.categories.map((cat) => {
+            const active = selectedCategory === cat.id;
+            return (
+              <TouchableOpacity
+                key={cat.id}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => setSelectedCategory(cat.id)}
               >
-                {category.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  variant="bodySmall"
+                  style={{ color: active ? '#FFF' : colors.text.secondary, fontWeight: '600' }}
+                >
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -168,9 +150,10 @@ export default function MenuScreen() {
           <MenuItemCard item={item} onPress={() => openItemDetail(item)} />
         )}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text variant="body" color="secondary">
+            <Text variant="body" color="tertiary" align="center">
               No items found
             </Text>
           </View>
@@ -179,12 +162,20 @@ export default function MenuScreen() {
 
       {itemCount > 0 && (
         <TouchableOpacity
-          style={styles.cartButton}
+          style={styles.fab}
           onPress={() => router.push('/cart')}
+          activeOpacity={0.85}
         >
-          <Text variant="button" style={styles.cartButtonText}>
-            View Cart ({itemCount})
-          </Text>
+          <View style={styles.fabContent}>
+            <Text variant="button" style={{ color: '#FFF' }}>
+              View Cart
+            </Text>
+            <View style={styles.fabBadge}>
+              <Text variant="caption" style={{ color: colors.primary, fontWeight: '700' }}>
+                {itemCount}
+              </Text>
+            </View>
+          </View>
         </TouchableOpacity>
       )}
 
@@ -196,23 +187,34 @@ export default function MenuScreen() {
       >
         {selectedItem && (
           <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setSelectedItem(null)}>
-                <Text variant="h3" style={styles.closeButton}>
-                  ✕
-                </Text>
-              </TouchableOpacity>
-              <Text variant="h2">{selectedItem.name}</Text>
+            <View style={styles.modalHandle}>
+              <View style={styles.handleBar} />
             </View>
 
-            <ScrollView style={styles.modalContent}>
-              <Text variant="body" color="secondary" style={styles.description}>
-                {selectedItem.description}
-              </Text>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text variant="h2">{selectedItem.name}</Text>
+                <Text variant="bodySmall" color="secondary" style={{ marginTop: spacing.xs }}>
+                  {selectedItem.description}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={() => setSelectedItem(null)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Text style={styles.closeBtnText}>{'\u2715'}</Text>
+              </TouchableOpacity>
+            </View>
 
+            <ScrollView
+              style={styles.modalBody}
+              contentContainerStyle={styles.modalBodyContent}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.priceRow}>
-                <Text variant="h3">Price</Text>
-                <PriceTag price={selectedItem.price} size="large" />
+                <Text variant="h3">Base Price</Text>
+                <PriceTag price={selectedItem.price} size="medium" />
               </View>
 
               {selectedItem.customizationGroups.map((group) => (
@@ -220,16 +222,13 @@ export default function MenuScreen() {
                   key={group.id}
                   group={group}
                   selections={customizations[group.id] || []}
-                  onChange={(selections) =>
-                    setCustomizations((prev) => ({
-                      ...prev,
-                      [group.id]: selections,
-                    }))
+                  onChange={(sels) =>
+                    setCustomizations((prev) => ({ ...prev, [group.id]: sels }))
                   }
                 />
               ))}
 
-              <View style={styles.quantitySection}>
+              <View style={styles.quantityRow}>
                 <Text variant="h3">Quantity</Text>
                 <QuantityControl
                   value={quantity}
@@ -241,12 +240,7 @@ export default function MenuScreen() {
             </ScrollView>
 
             <View style={styles.modalFooter}>
-              <Button
-                variant="primary"
-                size="large"
-                fullWidth
-                onPress={handleAddToCart}
-              >
+              <Button variant="primary" size="large" fullWidth onPress={handleAddToCart}>
                 Add to Cart
               </Button>
             </View>
@@ -263,9 +257,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    padding: spacing.md,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.card,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
   search: {
@@ -275,79 +271,112 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     flexGrow: 0,
   },
-  categoryChip: {
-    paddingHorizontal: spacing.md,
+  categoriesContent: {
+    gap: spacing.sm,
+  },
+  chip: {
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
     backgroundColor: colors.surface,
-    marginRight: spacing.sm,
   },
-  categoryChipActive: {
+  chipActive: {
     backgroundColor: colors.primary,
-  },
-  categoryChipTextActive: {
-    color: '#FFFFFF',
   },
   list: {
-    padding: spacing.md,
+    padding: spacing.lg,
+    paddingBottom: 100,
   },
   empty: {
-    padding: spacing.xl,
-    alignItems: 'center',
+    padding: spacing.huge,
   },
-  cartButton: {
+  fab: {
     position: 'absolute',
-    bottom: spacing.lg,
-    left: spacing.md,
-    right: spacing.md,
+    bottom: Platform.OS === 'ios' ? 34 : 20,
+    left: spacing.lg,
+    right: spacing.lg,
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
+    ...shadows.lg,
   },
-  cartButtonText: {
-    color: '#FFFFFF',
+  fabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  fabBadge: {
+    backgroundColor: '#FFF',
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.card,
+  },
+  modalHandle: {
+    alignItems: 'center',
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  handleBar: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.surfaceHighlight,
   },
   modalHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  closeButton: {
-    marginRight: spacing.md,
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.md,
+  },
+  closeBtnText: {
+    fontSize: 14,
     color: colors.text.secondary,
   },
-  modalContent: {
+  modalBody: {
     flex: 1,
-    padding: spacing.md,
   },
-  description: {
-    marginBottom: spacing.lg,
+  modalBodyContent: {
+    padding: spacing.xl,
   },
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
+    marginBottom: spacing.xxl,
+    paddingBottom: spacing.lg,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  quantitySection: {
+  quantityRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   modalFooter: {
-    padding: spacing.md,
-    borderTopWidth: 1,
+    padding: spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+    backgroundColor: colors.card,
   },
 });

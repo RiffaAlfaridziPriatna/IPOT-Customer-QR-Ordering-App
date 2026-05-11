@@ -18,87 +18,80 @@ export const CartItemRow: React.FC<CartItemRowProps> = ({
   onRemove,
 }) => {
   const itemPrice = calculateCartItemPrice(item);
-  
+
   const customizationText = item.customizations
     .map((selection) => {
-      const customizationGroup = item.menuItem.customizationGroups.find((group) =>
-        group.options.some((opt) => opt.id === selection.optionId)
+      const group = item.menuItem.customizationGroups.find((g) =>
+        g.options.some((opt) => opt.id === selection.optionId)
       );
-      const option = customizationGroup?.options.find(
-        (opt) => opt.id === selection.optionId
-      );
-      return option ? option.name : '';
+      return group?.options.find((opt) => opt.id === selection.optionId)?.name || '';
     })
     .filter(Boolean)
-    .join(', ');
+    .join(' \u00B7 ');
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
-        <Text variant="body" style={styles.name}>
-          {item.menuItem.name}
-        </Text>
-        {customizationText && (
-          <Text variant="caption" color="secondary" style={styles.customizations}>
+      <View style={styles.header}>
+        <View style={styles.titleRow}>
+          <Text variant="bodyMedium" numberOfLines={1} style={styles.name}>
+            {item.menuItem.name}
+          </Text>
+          <TouchableOpacity
+            onPress={onRemove}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={styles.removeIcon}>{'\u2715'}</Text>
+          </TouchableOpacity>
+        </View>
+        {customizationText !== '' && (
+          <Text variant="caption" color="secondary" numberOfLines={1}>
             {customizationText}
           </Text>
         )}
-        <View style={styles.footer}>
-          <QuantityControl
-            value={item.quantity}
-            onIncrement={() => onQuantityChange(item.quantity + 1)}
-            onDecrement={() => {
-              if (item.quantity === 1) {
-                onRemove();
-              } else {
-                onQuantityChange(item.quantity - 1);
-              }
-            }}
-            min={1}
-          />
-          <PriceTag price={itemPrice} />
-        </View>
       </View>
-      <TouchableOpacity onPress={onRemove} style={styles.removeButton}>
-        <Text variant="caption" style={styles.removeText}>
-          ✕
-        </Text>
-      </TouchableOpacity>
+
+      <View style={styles.footer}>
+        <QuantityControl
+          value={item.quantity}
+          onIncrement={() => onQuantityChange(item.quantity + 1)}
+          onDecrement={() => {
+            if (item.quantity === 1) onRemove();
+            else onQuantityChange(item.quantity - 1);
+          }}
+          min={1}
+        />
+        <PriceTag price={itemPrice} />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.card,
     borderRadius: borderRadius.md,
-    padding: spacing.md,
+    padding: spacing.lg,
     marginBottom: spacing.sm,
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
-  content: {
-    flex: 1,
+  header: {
+    marginBottom: spacing.md,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   name: {
-    fontWeight: '600',
-    marginBottom: spacing.xs,
+    flex: 1,
+    marginRight: spacing.sm,
   },
-  customizations: {
-    marginBottom: spacing.sm,
+  removeIcon: {
+    fontSize: 14,
+    color: colors.text.tertiary,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  removeButton: {
-    padding: spacing.xs,
-    marginLeft: spacing.sm,
-  },
-  removeText: {
-    color: colors.error,
-    fontSize: 20,
   },
 });

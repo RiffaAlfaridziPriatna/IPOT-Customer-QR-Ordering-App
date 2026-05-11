@@ -1,7 +1,9 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
+import { colors } from '@config/theme';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,20 +20,24 @@ export default function RootLayout() {
       <StatusBar style="auto" />
       <Stack
         screenOptions={{
-          headerShown: true,
           headerStyle: {
-            backgroundColor: '#FF6B35',
+            backgroundColor: colors.card,
           },
-          headerTintColor: '#fff',
+          headerTintColor: colors.text.primary,
           headerTitleStyle: {
             fontWeight: '600',
+            fontSize: 17,
           },
+          headerShadowVisible: false,
+          contentStyle: {
+            backgroundColor: colors.background,
+          },
+          animation: Platform.OS === 'ios' ? 'default' : 'fade_from_bottom',
         }}
       >
         <Stack.Screen
           name="index"
           options={{
-            title: 'Scan QR Code',
             headerShown: false,
           }}
         />
@@ -44,13 +50,15 @@ export default function RootLayout() {
         <Stack.Screen
           name="cart"
           options={{
-            title: 'Cart',
+            title: 'Your Cart',
+            presentation: 'card',
           }}
         />
         <Stack.Screen
           name="order/[orderId]"
           options={{
             title: 'Order Status',
+            headerBackVisible: false,
           }}
         />
       </Stack>

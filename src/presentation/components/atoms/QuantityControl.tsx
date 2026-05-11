@@ -27,24 +27,26 @@ export const QuantityControl: React.FC<QuantityControlProps> = ({
         style={[styles.button, !canDecrement && styles.buttonDisabled]}
         onPress={onDecrement}
         disabled={!canDecrement}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Text variant="h3" style={styles.buttonText}>
-          −
+        <Text variant="h3" style={{ color: canDecrement ? colors.primary : colors.text.disabled }}>
+          -
         </Text>
       </TouchableOpacity>
 
       <View style={styles.valueContainer}>
-        <Text variant="body" style={styles.value}>
+        <Text variant="bodyMedium" style={styles.value}>
           {value}
         </Text>
       </View>
 
       <TouchableOpacity
-        style={[styles.button, !canIncrement && styles.buttonDisabled]}
+        style={[styles.button, styles.buttonAdd, !canIncrement && styles.buttonDisabled]}
         onPress={onIncrement}
         disabled={!canIncrement}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Text variant="h3" style={styles.buttonText}>
+        <Text variant="h3" style={{ color: canIncrement ? '#FFFFFF' : colors.text.disabled }}>
           +
         </Text>
       </TouchableOpacity>
@@ -57,29 +59,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
   },
   button: {
     width: 36,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+  },
+  buttonAdd: {
+    backgroundColor: colors.primary,
   },
   buttonDisabled: {
-    opacity: 0.3,
-  },
-  buttonText: {
-    color: colors.primary,
+    opacity: 0.35,
   },
   valueContainer: {
-    minWidth: 40,
+    minWidth: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
   },
   value: {
     fontWeight: '600',
+    color: colors.text.primary,
   },
 });

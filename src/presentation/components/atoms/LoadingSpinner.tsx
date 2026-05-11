@@ -16,7 +16,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     <View style={styles.container}>
       <ActivityIndicator size={size} color={colors.primary} />
       {message && (
-        <Text variant="body" color="secondary" style={styles.message}>
+        <Text variant="bodySmall" color="secondary" style={styles.message}>
           {message}
         </Text>
       )}
@@ -26,11 +26,13 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.xl,
+    padding: spacing.huge,
+    backgroundColor: colors.background,
   },
   message: {
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
   },
 });
